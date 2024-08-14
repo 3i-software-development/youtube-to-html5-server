@@ -2,10 +2,14 @@ const ytdl = require('ytdl-core');
 const http = require('http');
 const url = require('url');
 const NodeCache = require('node-cache');
+const express = require('express');
+const cors = require('cors');
+
 const cache = new NodeCache();
 
 const hostname = process?.env?.HOST;
-const port = process?.env?.PORT;
+const app = express();
+const port = 43634;
 
 const successCacheAge = 14400; // 4hrs
 const errorCacheAge = 3600; // 1hrs
@@ -25,7 +29,7 @@ function sendResponse(response, data) {
 	response.setHeader('Access-Control-Allow-Origin', '*');
 	response.setHeader('Access-Control-Allow-Methods', 'GET');
 
-	response.setHeader( 'Content-Type', 'application/json' );
+	response.setHeader('Content-Type', 'application/json');
 	response.end(JSON.stringify(data));
 }
 
@@ -60,72 +64,68 @@ function sendError(response, data) {
  *
  * @type {Server} app
  */
-const app = http.createServer(function(request, response) {
+// Enable CORS for a specific origin
+const allowedOrigins = [
+	"http://localhost:4200",
+	"http://localhost:4201",
+	"http://localhost",
+	"https://localhost",
+	"ionic://localhost",
+	"capacitor://localhost",
+	"http://localhost:44450",
+	"http://127.0.0.1:3000",
+	"http://127.0.0.1:5501",
+	"https://notepad.metalearn.vn",
+	"https://ionic.metalearn.vn",
+	"https://do.metalearn.vn",
+];
 
-	/**
-	 * Get query params.
-	 *
-	 * @type {ParsedUrlQuery}
-	 */
-	const queryObject = url.parse(request.url, true).query;
+const corsOptions = {
+	origin: function (origin, callback) {
+		// Check if the origin is in the allowedOrigins array or if it's undefined (e.g., from a non-browser client)
+		if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+			callback(null, true);
+		} else {
+			callback(new Error('Not allowed by CORS'));
+		}
+	}
+};
 
+// Enable CORS with custom options
+app.use(cors(corsOptions));
+
+app.get('/', (req, res) => {
+	console.log('get query');
+	const queryObject = url.parse(req.url, true).query;
 	const idParam = queryObject?.id;
 	const urlParam = queryObject?.url;
 
 	if (!idParam && !urlParam) {
-		sendError(response, 'Missing `url` or `id` paramater.');
+		sendError(res, 'Missing `url` or `id` parameter.');
 	} else {
-
-		/**
-		 * Build url from id or url param.
-		 *
-		 * @type {string}
-		 */
 		const youtubeUrl = idParam ? `https://www.youtube.com/watch?v=${idParam}` : urlParam;
-
-		/**
-		 * Get current cache value (if any).
-		 *
-		 * @type {null|object}
-		 */
 		const cacheValue = cache.get(youtubeUrl);
 
-		// Return cache  value if exists.
 		if (cacheValue) {
-
-			// Cached response was a failure, send error.
 			if (Object.keys(cacheValue).length === 0 && cacheValue.constructor === Object || cacheValue.statusCode) {
-				sendError(response, cacheValue);
+				sendError(res, cacheValue);
+			} else {
+				sendSuccess(res, cacheValue);
 			}
-
-			// Cache response was a success!
-			else {
-				sendSuccess(response, cacheValue);
-			}
-		}
-
-		// No cache, make a new request.
-		else {
-			try {
-
-				/**
-				 * @link https://github.com/fent/node-ytdl-core
-				 */
-				ytdl.getInfo(youtubeUrl).then(data => {
+		} else {
+			ytdl.getInfo(youtubeUrl)
+				.then(data => {
 					cache.set(youtubeUrl, data, successCacheAge);
-					sendSuccess(response, data);
-				}).catch(error => {
+					sendSuccess(res, data);
+				})
+				.catch(error => {
 					cache.set(youtubeUrl, error, errorCacheAge);
-					sendError(response, error);
+					sendError(res, error);
 				});
-
-			} catch (error) {
-				sendError(response, error);
-			}
 		}
 	}
 });
 
-app.listen(port, hostname, () => {
-	console.log(`Server running at https://${hostname}:${port}`);
+app.listen(port, () => {
+	console.log(`Server is running on port ${port}`);
 });
