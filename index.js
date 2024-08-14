@@ -1,4 +1,4 @@
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
 const http = require('http');
 const url = require('url');
 const NodeCache = require('node-cache');

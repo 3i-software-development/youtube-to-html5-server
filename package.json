@@ -6,9 +6,9 @@
   "license": "ISC",
   "private": true,
   "dependencies": {
+    "@distube/ytdl-core": "^4.14.4",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "node-cache": "^5.1.2",
-    "ytdl-core": "^4.11.5"
+    "node-cache": "^5.1.2"
   }
 }
