@@ -1,4 +1,5 @@
 const ytdl = require('@distube/ytdl-core');
+import { YtdlCore, toPipeableStream } from '@ybd-project/ytdl-core';
 const http = require('http');
 const url = require('url');
 const NodeCache = require('node-cache');
@@ -6,6 +7,10 @@ const express = require('express');
 const cors = require('cors');
 
 const cache = new NodeCache();
+
+const ytdlNew = new YtdlCore({
+	// The options specified here will be the default values when functions such as getFullInfo are executed.
+});
 
 const hostname = process?.env?.HOST;
 const app = express();
@@ -113,7 +118,7 @@ app.get('/', (req, res) => {
 				sendSuccess(res, cacheValue);
 			}
 		} else {
-			ytdl.getInfo(youtubeUrl)
+			ytdlNew.getFullInfo(youtubeUrl)
 				.then(data => {
 					cache.set(youtubeUrl, data, successCacheAge);
 					sendSuccess(res, data);
@@ -122,6 +127,15 @@ app.get('/', (req, res) => {
 					cache.set(youtubeUrl, error, errorCacheAge);
 					sendError(res, error);
 				});
+			// ytdl.getInfo(youtubeUrl)
+			// 	.then(data => {
+			// 		cache.set(youtubeUrl, data, successCacheAge);
+			// 		sendSuccess(res, data);
+			// 	})
+			// 	.catch(error => {
+			// 		cache.set(youtubeUrl, error, errorCacheAge);
+			// 		sendError(res, error);
+			// 	});
 		}
 	}
 });
